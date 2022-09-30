@@ -1,175 +1,211 @@
 #include "minidb.h"
 
-#include <stdio.h>
-#include <string.h>
+#ifndef is_null
+#define is_null(ptr) ((ptr) == NULL)
+#endif
+
+#define MINIDB_INITIALIZE_EMPTY(db) \
+do {                                \
+    (db)->row_size = 0;             \
+    (db)->row_count = 0;            \
+    (db)->max_rows = 0;             \
+    (db)->index.size = 0;           \
+    (db)->index.root = NULL;        \
+    (db)->file = NULL;              \
+    (db)->index_begin_offset = 0;   \
+} while (0)
 
 #define RETURN_CASE_AS_STRING(caseval) case caseval: return #caseval
 
-const char* minidb_get_error_str(MiniDBError error)
+const char *minidb_error_get_str(MiniDbError value)
 {
-    switch (error) {
+    switch (value) {
         RETURN_CASE_AS_STRING(MINIDB_OK);
-        RETURN_CASE_AS_STRING(MINIDB_ERROR_SIN_ESPACIO);
-        RETURN_CASE_AS_STRING(MINIDB_ERROR_FUERA_DE_RANGO);
-        RETURN_CASE_AS_STRING(MINIDB_ERROR_YA_EXISTE_TUPLA);
-        RETURN_CASE_AS_STRING(MINIDB_ERROR_NCONTROL_INCORRECTO);
-        RETURN_CASE_AS_STRING(MINIDB_ERROR_TUPLA_NO_ENCONTRADA);
-        default: return "MINIDB_ERROR_DESCONOCIDO";
+        RETURN_CASE_AS_STRING(MINIDB_ERROR_INVALID_KEY);
+        RETURN_CASE_AS_STRING(MINIDB_ERROR_NOT_FOUND);
+        RETURN_CASE_AS_STRING(MINIDB_ERROR_DUPLICATED_KEY_VIOLATION);
+        RETURN_CASE_AS_STRING(MINIDB_ERROR_OUT_OF_SPACE);
+        default:
+            return "UNKNOWN MINIDBERROR";
     }
 }
 
-void minidb_nueva(MiniDB* db, char* ruta, size_t size)
+static void minidb_write_header(const MiniDb *db)
 {
-    FILE* fd;
-    fopen_s(&fd, ruta, "w+");
-    db->file = NULL;
-    db->size = 0;
+    fseek(db->file, 0, SEEK_SET);
+    fwrite(&db->row_size, sizeof(size_t), 1, db->file);
+    fwrite(&db->row_count, sizeof(int64_t), 1, db->file);
+    fwrite(&db->max_rows, sizeof(int64_t), 1, db->file);
+    fflush(db->file);
+}
 
-    if (fd != NULL) {
-        char zeros[sizeof(Alumno)];
-        memset(zeros, 0, sizeof(zeros));
-        size_t written;
-
-        for (size_t i = 0; i < size; i += written) {
-            written = fwrite(zeros, sizeof(char), sizeof(zeros), fd);
-            if (written == 0) {
-                break;
-            }
-        }
-
-        fflush(fd);
-        db->file = fd;
-        db->size = size;
+static void index_write_node_recurse(const MiniDb *db, const BinaryTreeNode *node)
+{
+    if (!is_null(node)) {
+        index_write_node_recurse(db, node->left);
+        fwrite(&node->key, sizeof(int64_t), 1, db->file);
+        index_write_node_recurse(db, node->right);
     }
 }
 
-void minidb_abrir(MiniDB* db, char* ruta)
+static void minidb_write_index(const MiniDb *db)
 {
-    FILE* fd;
-    fopen_s(&fd, ruta, "r+");
-    db->file = NULL;
-    db->size = 0;
-
-    if (fd != NULL) {
-        // obtener el tamaño del archivo
-        fseek(fd, 0, SEEK_END);
-        db->file = fd;
-        db->size = ftell(fd);
-    }
+    fseek(db->file, db->index_begin_offset, SEEK_SET);
+    index_write_node_recurse(db, db->index.root);
+    fflush(db->file);
 }
 
-void minidb_cerrar(MiniDB* db)
+static void minidb_page_erase(const MiniDb *db, size_t row_size, int64_t row_count)
 {
-    if (db != NULL && db->file != NULL) {
-        fflush(db->file);
-        fclose(db->file);
-        db->file = NULL;
-        db->size = 0;
-    }
-}
-
-void minidb_resize(MiniDB* db, size_t new_size)
-{
-    // Incrementar el tamaño de la base de datos
-    char zeros[sizeof(Alumno)];
-    memset(zeros, 0, sizeof(zeros));
-    size_t remaining = new_size - db->size;
-    size_t written;
-
-    fseek(db->file, 0, SEEK_END);
-    for (size_t i = 0; i < remaining; i += written) {
-        written = fwrite(zeros, sizeof(char), sizeof(zeros), db->file);
+    char *zeros = calloc(1, row_size);
+    for (int64_t i = 0; i < row_count; i++) {
+        size_t written = fwrite(zeros, sizeof(char), row_size, db->file);
         if (written == 0) {
             break;
         }
     }
 
     fflush(db->file);
-    db->size = new_size;
+    free(zeros);
 }
 
-MiniDBError minidb_select(MiniDB* db, int ncontrol, Alumno* resultado)
+void minidb_create(MiniDb *db, const char *path, size_t data_size, int64_t max_rows)
 {
-    if (ncontrol == 0) {
-        return MINIDB_ERROR_NCONTROL_INCORRECTO;
+    MINIDB_INITIALIZE_EMPTY(db);
+    db->file = fopen(path, "w+");
+    if (!is_null(db->file)) {
+        db->row_size = data_size;
+        db->max_rows = max_rows;
+        db->index_begin_offset = MINIDB_HEADER_SIZE + db->row_size * db->max_rows;
+        minidb_write_header(db);
+        minidb_page_erase(db, data_size, max_rows);
     }
-
-    size_t pos = sizeof(Alumno) * (ncontrol - 1);
-    if (ncontrol <= 0 || pos >= db->size) {
-        return MINIDB_ERROR_FUERA_DE_RANGO;
-    }
-
-    fseek(db->file, pos, SEEK_SET);
-    fread(resultado, sizeof(Alumno), 1, db->file);
-    fflush(db->file);
-    return resultado->ncontrol == 0 ? MINIDB_ERROR_TUPLA_NO_ENCONTRADA : MINIDB_OK;
 }
 
-MiniDBError minidb_insert(MiniDB* db, Alumno* alumno)
+void minidb_open(MiniDb *db, const char *path)
 {
-    if (alumno->ncontrol == 0) {
-        return MINIDB_ERROR_NCONTROL_INCORRECTO;
+    MINIDB_INITIALIZE_EMPTY(db);
+    db->file = fopen(path, "r+");
+    if (!is_null(db->file)) {
+        fread(&db->row_size, sizeof(size_t), 1, db->file);
+        fread(&db->row_count, sizeof(int64_t), 1, db->file);
+        fread(&db->max_rows, sizeof(int64_t), 1, db->file);
+        db->index_begin_offset = MINIDB_HEADER_SIZE + db->row_size * db->max_rows;
+
+        // Parse & load index
+        if (db->row_count > 0) {
+            fseek(db->file, db->index_begin_offset, SEEK_SET);
+            for (int64_t i = 0; i < db->row_count; i++) {
+                int64_t key;
+                fread(&key, sizeof(int64_t), 1, db->file);
+                binarytree_insert(&db->index, key);
+            }
+        }
+    }
+}
+
+void minidb_close(MiniDb *db)
+{
+    if (!is_null(db) && !is_null(db->file)) {
+        minidb_write_header(db);
+        minidb_write_index(db);
+        binarytree_destroy(&db->index);
+        fflush(db->file);
+        fclose(db->file);
+        MINIDB_INITIALIZE_EMPTY(db);
+    }
+}
+
+bool minidb_resize(MiniDb *db, int64_t max_rows)
+{
+    if (max_rows > db->max_rows) {
+        fseek(db->file, db->index_begin_offset, SEEK_SET);
+        minidb_page_erase(db, db->row_size, max_rows - db->max_rows);
+        db->max_rows = max_rows;
+        db->index_begin_offset = MINIDB_HEADER_SIZE + db->row_size * db->max_rows;
+        minidb_write_header(db);
+        minidb_write_index(db);
+        return true;
     }
 
-    size_t pos = sizeof(Alumno) * (alumno->ncontrol - 1);
-    if (pos >= db->size) {
-        return MINIDB_ERROR_SIN_ESPACIO;
+    return false;
+}
+
+MiniDbError minidb_select(MiniDb *db, int64_t key, void *result)
+{
+    if (key <= 0) {
+        return MINIDB_ERROR_INVALID_KEY;
     }
 
-    // Revisar si ya existe una tupla en esa posición
-    Alumno check;
-    MiniDBError err = minidb_select(db, alumno->ncontrol, &check);
-    if (err == MINIDB_OK && check.ncontrol > 0) {
-        return MINIDB_ERROR_YA_EXISTE_TUPLA;
+    BinaryTreeNode *node = binarytree_search(&db->index, key);
+    if (is_null(node)) {
+        return MINIDB_ERROR_NOT_FOUND;
     }
 
-    // Escribir la tupla ya que se confirmó que no existe
-    fseek(db->file, pos, SEEK_SET);
-    fwrite(alumno, sizeof(Alumno), 1, db->file);
+    size_t position = MINIDB_HEADER_SIZE + db->row_size * (node->key - 1);
+    fseek(db->file, position, SEEK_SET);
+    fread(result, db->row_size, 1, db->file);
+    return MINIDB_OK;
+}
+
+MiniDbError minidb_insert(MiniDb *db, int64_t key, void *data)
+{
+    if (key <= 0) {
+        return MINIDB_ERROR_INVALID_KEY;
+    }
+
+    if (binarytree_contains(&db->index, key)) {
+        return MINIDB_ERROR_DUPLICATED_KEY_VIOLATION;
+    }
+
+    size_t position = MINIDB_HEADER_SIZE + db->row_size * (key - 1);
+    if (position >= db->index_begin_offset) {
+        return MINIDB_ERROR_OUT_OF_SPACE;
+    }
+
+    fseek(db->file, position, SEEK_SET);
+    fwrite(data, db->row_size, 1, db->file);
+    db->row_count++;
+
+    binarytree_insert(&db->index, key);
+
+    minidb_write_header(db);
+    minidb_write_index(db);
+    return MINIDB_OK;
+}
+
+MiniDbError minidb_update(MiniDb *db, int64_t key, void *data)
+{
+    if (key <= 0) {
+        return MINIDB_ERROR_INVALID_KEY;
+    }
+
+    BinaryTreeNode *node = binarytree_search(&db->index, key);
+    if (is_null(node)) {
+        return MINIDB_ERROR_NOT_FOUND;
+    }
+
+    size_t position = MINIDB_HEADER_SIZE + db->row_size * (node->key - 1);
+    fseek(db->file, position, SEEK_SET);
+    fwrite(data, db->row_size, 1, db->file);
     fflush(db->file);
     return MINIDB_OK;
 }
 
-MiniDBError minidb_update(MiniDB* db, Alumno* alumno)
+MiniDbError minidb_delete(MiniDb *db, int64_t key)
 {
-    if (alumno->ncontrol == 0) {
-        return MINIDB_ERROR_NCONTROL_INCORRECTO;
+    if (key <= 0) {
+        return MINIDB_ERROR_INVALID_KEY;
     }
 
-    long pos = (long)sizeof(Alumno) * (alumno->ncontrol - 1);
-    if (pos >= db->size) {
-        return MINIDB_ERROR_SIN_ESPACIO;
+    if (db->row_count > 0) {
+        bool removed = binarytree_remove(&db->index, key);
+        if (removed) {
+            db->row_count--;
+            minidb_write_header(db);
+            minidb_write_index(db);
+        }
     }
 
-    // Revisar que la tupla exista
-    Alumno check;
-    MiniDBError err = minidb_select(db, alumno->ncontrol, &check);
-    if (err != MINIDB_OK) {
-        return MINIDB_ERROR_TUPLA_NO_ENCONTRADA;
-    }
-
-    // Escribir la tupla ya que se confirmó que no existe
-    fseek(db->file, pos, SEEK_SET);
-    fwrite(alumno, sizeof(Alumno), 1, db->file);
-    fflush(db->file);
-    return MINIDB_OK;
-}
-
-MiniDBError minidb_delete(MiniDB* db, int ncontrol)
-{
-    if (ncontrol == 0) {
-        return MINIDB_ERROR_NCONTROL_INCORRECTO;
-    }
-
-    long pos = (long)sizeof(Alumno) * (ncontrol - 1);
-    if (pos >= db->size) {
-        return MINIDB_ERROR_SIN_ESPACIO;
-    }
-
-    char zeros[sizeof(Alumno)];
-    memset(zeros, 0, sizeof(zeros));
-    fseek(db->file, pos, SEEK_SET);
-    fwrite(zeros, sizeof(char), sizeof(zeros), db->file);
-    fflush(db->file);
     return MINIDB_OK;
 }
