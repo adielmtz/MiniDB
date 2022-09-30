@@ -173,7 +173,7 @@ static void tree_remove_node_recurse(BinaryTreeNode **root, int64_t key)
         tree_remove_node_recurse(root, subkey);
         current->key = subkey;
     } else {
-        BinaryTreeNode *child = is_null(current->left) ? current->left : current->right;
+        BinaryTreeNode *child = !is_null(current->left) ? current->left : current->right;
         if (current != *root) {
             if (current == parent->left) {
                 parent->left = child;

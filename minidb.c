@@ -1,4 +1,5 @@
 #include "minidb.h"
+#include <assert.h>
 
 #ifndef is_null
 #define is_null(ptr) ((ptr) == NULL)
@@ -202,6 +203,7 @@ MiniDbError minidb_delete(MiniDb *db, int64_t key)
         bool removed = binarytree_remove(&db->index, key);
         if (removed) {
             db->row_count--;
+            assert(db->row_count == db->index.size);
             minidb_write_header(db);
             minidb_write_index(db);
         }
