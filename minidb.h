@@ -5,14 +5,16 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define MINIDB_HEADER_SIZE (sizeof(size_t) + sizeof(int64_t) + sizeof(int64_t))
+#define MINIDB_HEADER_SIZE (sizeof(((MiniDb*)0)->header))
 
 typedef struct MiniDb
 {
-    /* Serialized fields */
-    size_t row_size;
-    int64_t row_count;
-    int64_t max_rows;
+    struct
+    {
+        size_t row_size;
+        int64_t row_count;
+        int64_t max_rows;
+    } header;
 
     /* Runtime fields */
     FILE *file;
