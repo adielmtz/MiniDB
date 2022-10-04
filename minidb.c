@@ -35,6 +35,7 @@ static void minidb_header_write(const MiniDb *db)
 {
     fseek(db->file, 0, SEEK_SET);
     fwrite(&db->header, MINIDB_HEADER_SIZE, 1, db->file);
+    fflush(db->file);
 }
 
 static void index_write_node_recurse(const MiniDb *db, const BinaryTreeNode *node)
