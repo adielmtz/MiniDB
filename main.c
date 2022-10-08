@@ -12,18 +12,18 @@ do {                                            \
     (outbuff)[strlen((outbuff)) - 1] = '\0';    \
 } while (0)
 
-#define prompt_int(text, intval)    \
-do {                                \
-    char buff[20];                  \
-    prompt_string(text, buff);      \
-    sscanf_s(buff, "%d", (intval)); \
+#define prompt_int(text, intval)  \
+do {                              \
+    char buff[20];                \
+    prompt_string(text, buff);    \
+    sscanf(buff, "%d", (intval)); \
 } while (0)
 
-#define prompt_float(text, intval)  \
-do {                                \
-    char buff[20];                  \
-    prompt_string(text, buff);      \
-    sscanf_s(buff, "%f", (intval)); \
+#define prompt_float(text, floatval) \
+do {                                 \
+    char buff[20];                   \
+    prompt_string(text, buff);       \
+    sscanf(buff, "%f", (floatval));  \
 } while (0)
 
 typedef struct Alumno
@@ -35,11 +35,11 @@ typedef struct Alumno
 
 static void print_pretty_table(const Alumno *alumno)
 {
-    puts("+-----------------------------------------------------+------------+----------+");
-    puts("|                       Nombre                        | N. Control | Promedio |");
-    puts("+-----------------------------------------------------+------------+----------+");
+    puts("+---------------------------------+------------+----------+");
+    puts("|             Nombre              | N. Control | Promedio |");
+    puts("+---------------------------------+------------+----------+");
     printf("| %-31s | % 10d | %8.1f |\n", alumno->nombre, alumno->ncontrol, alumno->promedio);
-    puts("+-----------------------------------------------------+------------+----------+");
+    puts("+---------------------------------+------------+----------+");
 }
 
 static void select_print_all_recursive(MiniDb *db, BinaryTreeNode *node)
@@ -48,7 +48,7 @@ static void select_print_all_recursive(MiniDb *db, BinaryTreeNode *node)
         select_print_all_recursive(db, node->left);
 
         Alumno alumno;
-        MiniDbError error = minidb_select(db, node->key, &alumno);
+        MiniDbError error = minidb_select(db, node->data.key, &alumno);
         if (error != MINIDB_OK) {
             printf("PANIK! %s\n", minidb_error_get_str(error));
             return;
@@ -77,21 +77,17 @@ int main(void)
 
         if (strcmp(command, "exit") == 0) {
             return 0;
-        } else if (strcmp(command, "new") == 0) {
+        } else if (strcmp(command, "new") == 0 || strcmp(command, "nueva") == 0) {
             prompt_string("Path: ", filepath);
-
-            int size;
-            prompt_int("Size: ", &size);
-
             printf("Creando base de datos... ");
             fflush(stdout);
-            minidb_create(&db, filepath, sizeof(Alumno), size);
+            minidb_create(&db, filepath, sizeof(Alumno));
             puts("Ok!\n");
             fflush(stdout);
-        } else if (strcmp(command, "open") == 0) {
+        } else if (strcmp(command, "open") == 0 || strcmp(command, "abrir") == 0) {
             prompt_string("Physical name: ", filepath);
             minidb_open(&db, filepath);
-            if (db.file == NULL) {
+            if (db.data_file == NULL) {
                 printf("Error fatal: el archivo no existe o no se pudo abrir.\n");
                 exit(1);
             }
@@ -131,11 +127,11 @@ int main(void)
             break;
         } else if (strcmp(command, "dbinfo") == 0) {
             puts("== DATABASE INFO ==");
-            printf("Physical name : %s\n", db_name);
-            printf("Row Size      : %zu\n", db.header.row_size);
-            printf("Row Count     : %zu\n", db.header.row_count);
-            printf("Max Row Count : %zu\n", db.header.max_rows);
-            printf("Db Data Size  : %zu bytes\n", db.header.max_rows * db.header.row_size);
+            printf("Physical name  : %s\n", db_name);
+            printf("Row Size       : %zu\n", db.header.row_size);
+            printf("Row Count      : %zu\n", db.header.row_count);
+            printf("Freelist Count : %zu\n", db.header.freelist_count);
+            printf("Db Data Size   : %zu bytes\n", db.header.row_count * db.header.row_size);
             puts("");
         } else if (strcmp(command, "select") == 0) {
             int ncontrol;
@@ -187,15 +183,6 @@ int main(void)
             }
 
             puts("Tupla eliminada correctamente\n");
-        } else if (strcmp(command, "resize") == 0) {
-            int nuevo_tamano;
-            prompt_int("Size: ", &nuevo_tamano);
-
-            if (minidb_resize(&db, nuevo_tamano)) {
-                puts("Base de datos redimensionada correctamente.\n");
-            } else {
-                puts("Error: no se puede reducir el tamano la base de datos.\n");
-            }
         } else {
             if (command[0] != '\0') {
                 puts("Error: comando no reconocido.\n");

@@ -13,11 +13,12 @@
 /**
  * Creates a new empty node.
  */
-static BinaryTreeNode *node_create(int64_t key)
+static BinaryTreeNode *node_create(int64_t key, int64_t address)
 {
     BinaryTreeNode *node = malloc(sizeof(BinaryTreeNode));
     if (!is_null(node)) {
-        node->key = key;
+        node->data.key = key;
+        node->data.address = address;
         node->left = NULL;
         node->right = NULL;
     }
@@ -56,11 +57,11 @@ bool binarytree_contains(const BinaryTree *tree, int64_t key)
 {
     BinaryTreeNode *current = tree->root;
     while (!is_null(current)) {
-        if (current->key == key) {
+        if (current->data.key == key) {
             return true;
         }
 
-        current = key < current->key ? current->left : current->right;
+        current = key < current->data.key ? current->left : current->right;
     }
 
     return false;
@@ -74,9 +75,9 @@ static BinaryTreeNode *node_search_recurse(BinaryTreeNode *node, int64_t key, Bi
     BinaryTreeNode *last = NULL;
     BinaryTreeNode *current = node;
 
-    while (current != NULL && current->key != key) {
+    while (current != NULL && current->data.key != key) {
         last = current;
-        if (key < current->key) {
+        if (key < current->data.key) {
             current = current->left;
         } else {
             current = current->right;
@@ -102,26 +103,26 @@ BinaryTreeNode *binarytree_search(const BinaryTree *tree, int64_t key)
 /**
  * Recursively inserts a new node in the tree.
  */
-static BinaryTreeNode *tree_insert_node_recurse(BinaryTreeNode *parent, int64_t key)
+static BinaryTreeNode *tree_insert_node_recurse(BinaryTreeNode *parent, int64_t key, int64_t address)
 {
-    BinaryTreeNode **child = key < parent->key ? &parent->left : &parent->right;
+    BinaryTreeNode **child = key < parent->data.key ? &parent->left : &parent->right;
     if (is_null(*child)) {
-        *child = node_create(key);
+        *child = node_create(key, address);
         return *child;
     } else {
-        return tree_insert_node_recurse(*child, key);
+        return tree_insert_node_recurse(*child, key, address);
     }
 }
 
-BinaryTreeNode *binarytree_insert(BinaryTree *tree, int64_t key)
+BinaryTreeNode *binarytree_insert(BinaryTree *tree, int64_t key, int64_t address)
 {
     BinaryTreeNode *new_node = NULL;
     if (tree_is_empty(tree)) {
         assert(tree->root == NULL);
-        new_node = node_create(key);
+        new_node = node_create(key, address);
         tree->root = new_node;
     } else {
-        new_node = tree_insert_node_recurse(tree->root, key);
+        new_node = tree_insert_node_recurse(tree->root, key, address);
     }
 
     if (!is_null(new_node)) {
@@ -146,13 +147,17 @@ static BinaryTreeNode *tree_search_successor_node(BinaryTreeNode *node)
 /**
  * Recursively removes a node from the tree.
  */
-static void tree_remove_node_recurse(BinaryTreeNode **root, int64_t key)
+static void tree_remove_node_recurse(BinaryTreeNode **root, int64_t key, int64_t *address)
 {
     BinaryTreeNode *parent = NULL;
     BinaryTreeNode *current = node_search_recurse(*root, key, &parent);
 
     if (is_null(current)) {
         return;
+    }
+
+    if (!is_null(address)) {
+        *address = current->data.address;
     }
 
     if (node_is_leaf(current)) {
@@ -169,9 +174,11 @@ static void tree_remove_node_recurse(BinaryTreeNode **root, int64_t key)
         free(current);
     } else if (node_is_branch(current)) {
         BinaryTreeNode *successor = tree_search_successor_node(current->right);
-        int64_t subkey = successor->key;
-        tree_remove_node_recurse(root, subkey);
-        current->key = subkey;
+        int64_t subkey = successor->data.key;
+        int64_t subaddress = successor->data.address;
+        tree_remove_node_recurse(root, subkey, NULL);
+        current->data.key = subkey;
+        current->data.address = subaddress;
     } else {
         BinaryTreeNode *child = !is_null(current->left) ? current->left : current->right;
         if (current != *root) {
@@ -188,10 +195,10 @@ static void tree_remove_node_recurse(BinaryTreeNode **root, int64_t key)
     }
 }
 
-bool binarytree_remove(BinaryTree *tree, int64_t key)
+bool binarytree_remove(BinaryTree *tree, int64_t key, int64_t *address)
 {
     if (!tree_is_empty(tree)) {
-        tree_remove_node_recurse(&tree->root, key);
+        tree_remove_node_recurse(&tree->root, key, address);
         tree->size--;
         return true;
     }

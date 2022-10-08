@@ -3,9 +3,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define BINARYTREE_NODE_DATA_SIZE (sizeof(((BinaryTreeNode*)0)->data))
+
 typedef struct BinaryTreeNode
 {
-    int64_t key;
+    struct
+    {
+        int64_t key;
+        int64_t address;
+    } data;
     struct BinaryTreeNode *left;
     struct BinaryTreeNode *right;
 } BinaryTreeNode;
@@ -54,17 +60,19 @@ BinaryTreeNode *binarytree_search(const BinaryTree *tree, int64_t key);
  *
  * @param tree The tree where to insert the key.
  * @param key The key to insert.
+ * @param address The address of the data (on disk).
  *
  * @return The new node appended to the tree.
  */
-BinaryTreeNode *binarytree_insert(BinaryTree *tree, int64_t key);
+BinaryTreeNode *binarytree_insert(BinaryTree *tree, int64_t key, int64_t address);
 
 /**
  * Removes a key from the tree.
  *
  * @param tree The tree where to remove the key from.
  * @param key The key to remove.
+ * @param address If not NULL, contains the address stored in the removed node.
  *
  * @return True if a key was found and successfully removed from the tree. Otherwise, false.
  */
-bool binarytree_remove(BinaryTree *tree, int64_t key);
+bool binarytree_remove(BinaryTree *tree, int64_t key, int64_t *address);

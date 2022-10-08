@@ -13,13 +13,14 @@ typedef struct MiniDb
     {
         size_t row_size;
         int64_t row_count;
-        int64_t max_rows;
+        int64_t freelist_count;
     } header;
 
     /* Runtime fields */
-    FILE *file;
-    size_t index_begin_offset; // end of data segment; begin of index segment
+    FILE *data_file;
+    FILE *index_file;
     BinaryTree index;
+    BinaryTree freelist;
 } MiniDb;
 
 typedef enum MiniDbError
@@ -44,9 +45,8 @@ const char *minidb_error_get_str(MiniDbError value);
  * @param db The MiniDb object to initialize (stack-allocated).
  * @param path The path to the database file.
  * @param data_size The size of the data to store (sizeof(my_struct)).
- * @param max_rows The maximum number of rows to store.
  */
-void minidb_create(MiniDb *db, const char *path, size_t data_size, int64_t max_rows);
+void minidb_create(MiniDb *db, const char *path, size_t data_size);
 
 /**
  * Opens an existing MiniDb database file.
@@ -62,16 +62,6 @@ void minidb_open(MiniDb *db, const char *path);
  * @param db The MiniDb object to close.
  */
 void minidb_close(MiniDb *db);
-
-/**
- * Adds more rows to an existing MiniDb database.
- *
- * @param db The MiniDb object to expand.
- * @param max_rows The expanded maximum rows.
- *
- * @return True if max_rows is greater than the old MiniDb.max_rows value; false otherwise.
- */
-bool minidb_resize(MiniDb *db, int64_t max_rows);
 
 /**
  * Selects a row that matches the given key.
