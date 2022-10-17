@@ -14,7 +14,6 @@ const char *minidb_error_get_str(MiniDbError value)
 {
     switch (value) {
         RETURN_CASE_AS_STRING(MINIDB_OK);
-        RETURN_CASE_AS_STRING(MINIDB_ERROR_INVALID_KEY);
         RETURN_CASE_AS_STRING(MINIDB_ERROR_NOT_FOUND);
         RETURN_CASE_AS_STRING(MINIDB_ERROR_DUPLICATED_KEY_VIOLATION);
         RETURN_CASE_AS_STRING(MINIDB_ERROR_OUT_OF_SPACE);
@@ -143,10 +142,6 @@ void minidb_close(MiniDb *db)
 
 MiniDbError minidb_select(MiniDb *db, int64_t key, void *result)
 {
-    if (key <= 0) {
-        return MINIDB_ERROR_INVALID_KEY;
-    }
-
     BinaryTreeNode *node = binarytree_search(&db->index, key);
     if (is_null(node)) {
         return MINIDB_ERROR_NOT_FOUND;
@@ -192,10 +187,6 @@ static const BinaryTreeNode *minidb_freelist_find_node(const MiniDb *db)
 
 MiniDbError minidb_insert(MiniDb *db, int64_t key, void *data)
 {
-    if (key <= 0) {
-        return MINIDB_ERROR_INVALID_KEY;
-    }
-
     if (binarytree_contains(&db->index, key)) {
         return MINIDB_ERROR_DUPLICATED_KEY_VIOLATION;
     }
@@ -224,10 +215,6 @@ MiniDbError minidb_insert(MiniDb *db, int64_t key, void *data)
 
 MiniDbError minidb_update(MiniDb *db, int64_t key, void *data)
 {
-    if (key <= 0) {
-        return MINIDB_ERROR_INVALID_KEY;
-    }
-
     BinaryTreeNode *node = binarytree_search(&db->index, key);
     if (is_null(node)) {
         return MINIDB_ERROR_NOT_FOUND;
@@ -241,10 +228,6 @@ MiniDbError minidb_update(MiniDb *db, int64_t key, void *data)
 
 MiniDbError minidb_delete(MiniDb *db, int64_t key)
 {
-    if (key <= 0) {
-        return MINIDB_ERROR_INVALID_KEY;
-    }
-
     if (db->header.row_count > 0) {
         int64_t old_address;
         bool removed = binarytree_remove(&db->index, key, &old_address);
