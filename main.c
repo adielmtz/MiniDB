@@ -56,7 +56,7 @@ static void select_print_callback(int64_t key, void *data)
 int main(void)
 {
     MiniDb db;
-    MiniDbError error;
+    MiniDbState error;
 
     char command[COMMAND_MAX_STRLEN];
     char filepath[COMMAND_MAX_STRLEN];
