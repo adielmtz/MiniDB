@@ -1,6 +1,7 @@
 #include "minidb.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define COMMAND_MAX_STRLEN 256
 
@@ -12,53 +13,44 @@ do {                                            \
     (outbuff)[strlen((outbuff)) - 1] = '\0';    \
 } while (0)
 
-#define prompt_int(text, intval)  \
-do {                              \
-    char buff[20];                \
-    prompt_string(text, buff);    \
-    sscanf(buff, "%d", (intval)); \
+#define prompt_int(text, intval)    \
+do {                                \
+    char buff[20];                  \
+    prompt_string(text, buff);      \
+    sscanf_s(buff, "%d", (intval)); \
 } while (0)
 
-#define prompt_float(text, floatval) \
-do {                                 \
-    char buff[20];                   \
-    prompt_string(text, buff);       \
-    sscanf(buff, "%f", (floatval));  \
+#define prompt_float(text, floatval)  \
+do {                                  \
+    char buff[20];                    \
+    prompt_string(text, buff);        \
+    sscanf_s(buff, "%f", (floatval)); \
 } while (0)
 
 typedef struct Alumno
 {
-    char nombre[32]; // 31 + \0
+    char nombre[52]; // 51 + \0
     int ncontrol;
     float promedio;
 } Alumno;
 
-static void print_pretty_table(const Alumno *alumno)
+static void print_pretty_table(const Alumno *alumno, bool print_header)
 {
-    puts("+---------------------------------+------------+----------+");
-    puts("|             Nombre              | N. Control | Promedio |");
-    puts("+---------------------------------+------------+----------+");
-    printf("| %-31s | % 10d | %8.1f |\n", alumno->nombre, alumno->ncontrol, alumno->promedio);
-    puts("+---------------------------------+------------+----------+");
+    if (print_header) {
+        puts("+-----------------------------------------------------+------------+----------+");
+        puts("|                       Nombre                        | N. Control | Promedio |");
+        puts("+-----------------------------------------------------+------------+----------+");
+    }
+
+    if (alumno != NULL) {
+        printf("| %-51s | % 10d | % 8.1f |\n", alumno->nombre, alumno->ncontrol, alumno->promedio);
+        puts("+-----------------------------------------------------+------------+----------+");
+    }
 }
 
-static void select_print_all_recursive(MiniDb *db, BinaryTreeNode *node)
+static void select_print_callback(int64_t key, void *data)
 {
-    if (node != NULL) {
-        select_print_all_recursive(db, node->left);
-
-        Alumno alumno;
-        MiniDbError error = minidb_select(db, node->data.key, &alumno);
-        if (error != MINIDB_OK) {
-            printf("PANIK! %s\n", minidb_error_get_str(error));
-            return;
-        }
-
-        print_pretty_table(&alumno);
-        puts("");
-
-        select_print_all_recursive(db, node->right);
-    }
+    print_pretty_table((Alumno *) data, false);
 }
 
 int main(void)
@@ -73,7 +65,7 @@ int main(void)
     printf("MiniDb x%zu bits.\n\n", sizeof(int *) * 8);
 
     while (1) {
-        prompt_string("MiniDb > ", command);
+        prompt_string("MiniDb> ", command);
 
         if (strcmp(command, "exit") == 0) {
             return 0;
@@ -85,7 +77,7 @@ int main(void)
             puts("Ok!\n");
             fflush(stdout);
         } else if (strcmp(command, "open") == 0 || strcmp(command, "abrir") == 0) {
-            prompt_string("Physical name: ", filepath);
+            prompt_string("Path: ", filepath);
             minidb_open(&db, filepath);
             if (db.data_file == NULL) {
                 printf("Error fatal: el archivo no existe o no se pudo abrir.\n");
@@ -144,12 +136,13 @@ int main(void)
                 continue;
             }
 
-            print_pretty_table(&alumno);
+            print_pretty_table(&alumno, true);
             printf("\n");
         } else if (strcmp(command, "select *") == 0) {
-            select_print_all_recursive(&db, db.index.root);
+            print_pretty_table(NULL, true);
+            minidb_select_all(&db, select_print_callback);
         } else if (strcmp(command, "insert") == 0) {
-            prompt_string("Nombre[31]: ", alumno.nombre);
+            prompt_string("Nombre[51]: ", alumno.nombre);
             prompt_int("N. control: ", &alumno.ncontrol);
             prompt_float("Promedio:   ", &alumno.promedio);
 
@@ -161,7 +154,7 @@ int main(void)
 
             puts("Tupla insertada correctamente\n");
         } else if (strcmp(command, "update") == 0) {
-            prompt_string("Nombre[31]: ", alumno.nombre);
+            prompt_string("Nombre[51]: ", alumno.nombre);
             prompt_int("N. control: ", &alumno.ncontrol);
             prompt_float("Promedio:   ", &alumno.promedio);
 
