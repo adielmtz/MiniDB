@@ -157,6 +157,24 @@ MiniDbError minidb_select(MiniDb *db, int64_t key, void *result)
     return MINIDB_OK;
 }
 
+static void minidb_index_traverse(MiniDb *db, BinaryTreeNode *current, void *result, void (*callback)(int64_t, void *))
+{
+    if (!is_null(current)) {
+        minidb_index_traverse(db, current->left, result, callback);
+        minidb_select(db, current->data.key, result);
+        callback(current->data.key, result);
+        minidb_index_traverse(db, current->right, result, callback);
+    }
+}
+
+MiniDbError minidb_select_all(MiniDb *db, void (*callback)(int64_t, void *))
+{
+    void *result = malloc(db->header.row_size);
+    minidb_index_traverse(db, db->index.root, result, callback);
+    free(result);
+    return MINIDB_OK;
+}
+
 /**
  * Finds the smallest free address available. Returns NULL if the freelist index is empty.
  */

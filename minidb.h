@@ -74,6 +74,15 @@ void minidb_close(MiniDb *db);
 MiniDbError minidb_select(MiniDb *db, int64_t key, void *result);
 
 /**
+ * Selects all rows in the database.
+ *
+ * @param db The MiniDb object.
+ * @param callback The callback function that will be executed on for each row.
+ * @return MINIDB_OK on success.
+ */
+MiniDbError minidb_select_all(MiniDb *db, void (*callback)(int64_t, void*));
+
+/**
  * Inserts a new row into the MiniDb database.
  *
  * @param db The MiniDb object.
