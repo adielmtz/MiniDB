@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define MINIDB_HEADER_SIZE (sizeof(((MiniDb*)0)->header))
-
 typedef struct MiniDb
 {
     struct
@@ -23,20 +21,20 @@ typedef struct MiniDb
     BinaryTree freelist;
 } MiniDb;
 
-typedef enum MiniDbError
+typedef enum MiniDbState
 {
     MINIDB_OK,
     MINIDB_ERROR_NOT_FOUND,
     MINIDB_ERROR_DUPLICATED_KEY_VIOLATION,
     MINIDB_ERROR_OUT_OF_SPACE,
-} MiniDbError;
+} MiniDbState;
 
 /**
  * Returns the error value as string.
  *
  * @param value The MiniDbError value.
  */
-const char *minidb_error_get_str(MiniDbError value);
+const char *minidb_error_get_str(MiniDbState value);
 
 /**
  * Creates a new MiniDb database file.
@@ -70,7 +68,7 @@ void minidb_close(MiniDb *db);
  * @param result Where the row will be stored.
  * @return MINIDB_OK on success.
  */
-MiniDbError minidb_select(MiniDb *db, int64_t key, void *result);
+MiniDbState minidb_select(MiniDb *db, int64_t key, void *result);
 
 /**
  * Selects all rows in the database.
@@ -79,7 +77,7 @@ MiniDbError minidb_select(MiniDb *db, int64_t key, void *result);
  * @param callback The callback function that will be executed on for each row.
  * @return MINIDB_OK on success.
  */
-MiniDbError minidb_select_all(MiniDb *db, void (*callback)(int64_t, void*));
+MiniDbState minidb_select_all(MiniDb *db, void (*callback)(int64_t, void *));
 
 /**
  * Inserts a new row into the MiniDb database.
@@ -90,7 +88,7 @@ MiniDbError minidb_select_all(MiniDb *db, void (*callback)(int64_t, void*));
  *
  * @return MINIDB_OK on success.
  */
-MiniDbError minidb_insert(MiniDb *db, int64_t key, void *data);
+MiniDbState minidb_insert(MiniDb *db, int64_t key, void *data);
 
 /**
  * Updates an existing row;
@@ -101,7 +99,7 @@ MiniDbError minidb_insert(MiniDb *db, int64_t key, void *data);
  *
  * @return MINIDB_OK on success.
  */
-MiniDbError minidb_update(MiniDb *db, int64_t key, void *data);
+MiniDbState minidb_update(MiniDb *db, int64_t key, void *data);
 
 /**
  * Deletes an existing row from the database.
@@ -111,4 +109,4 @@ MiniDbError minidb_update(MiniDb *db, int64_t key, void *data);
  *
  * @return MINIDB_OK on success.
  */
-MiniDbError minidb_delete(MiniDb *db, int64_t key);
+MiniDbState minidb_delete(MiniDb *db, int64_t key);

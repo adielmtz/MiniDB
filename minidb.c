@@ -7,10 +7,10 @@
 #endif
 
 #define MINIDB_INDEX_SUFFIX "-index"
-
+#define MINIDB_HEADER_SIZE (sizeof(((MiniDb*)0)->header))
 #define RETURN_CASE_AS_STRING(caseval) case caseval: return #caseval
 
-const char *minidb_error_get_str(MiniDbError value)
+const char *minidb_error_get_str(MiniDbState value)
 {
     switch (value) {
         RETURN_CASE_AS_STRING(MINIDB_OK);
@@ -49,7 +49,7 @@ static void index_write_node_recurse(const MiniDb *db, const BinaryTreeNode *nod
     }
 }
 
-static void minidb_write_index(const MiniDb *db)
+static void minidb_index_write(const MiniDb *db)
 {
     fseek(db->index_file, 0, SEEK_SET);
     index_write_node_recurse(db, db->index.root);
@@ -129,7 +129,7 @@ void minidb_close(MiniDb *db)
 {
     if (!is_null(db) && !is_null(db->data_file)) {
         minidb_header_write(db);
-        minidb_write_index(db);
+        minidb_index_write(db);
         binarytree_destroy(&db->index);
         binarytree_destroy(&db->freelist);
         fflush(db->data_file);
@@ -140,7 +140,7 @@ void minidb_close(MiniDb *db)
     }
 }
 
-MiniDbError minidb_select(MiniDb *db, int64_t key, void *result)
+MiniDbState minidb_select(MiniDb *db, int64_t key, void *result)
 {
     BinaryTreeNode *node = binarytree_search(&db->index, key);
     if (is_null(node)) {
@@ -162,7 +162,7 @@ static void minidb_index_traverse(MiniDb *db, BinaryTreeNode *current, void *res
     }
 }
 
-MiniDbError minidb_select_all(MiniDb *db, void (*callback)(int64_t, void *))
+MiniDbState minidb_select_all(MiniDb *db, void (*callback)(int64_t, void *))
 {
     void *result = malloc(db->header.row_size);
     minidb_index_traverse(db, db->index.root, result, callback);
@@ -185,7 +185,7 @@ static const BinaryTreeNode *minidb_freelist_find_node(const MiniDb *db)
     return node;
 }
 
-MiniDbError minidb_insert(MiniDb *db, int64_t key, void *data)
+MiniDbState minidb_insert(MiniDb *db, int64_t key, void *data)
 {
     if (binarytree_contains(&db->index, key)) {
         return MINIDB_ERROR_DUPLICATED_KEY_VIOLATION;
@@ -209,11 +209,11 @@ MiniDbError minidb_insert(MiniDb *db, int64_t key, void *data)
 
     binarytree_insert(&db->index, key, address);
     minidb_header_write(db);
-    minidb_write_index(db);
+    minidb_index_write(db);
     return MINIDB_OK;
 }
 
-MiniDbError minidb_update(MiniDb *db, int64_t key, void *data)
+MiniDbState minidb_update(MiniDb *db, int64_t key, void *data)
 {
     BinaryTreeNode *node = binarytree_search(&db->index, key);
     if (is_null(node)) {
@@ -226,7 +226,7 @@ MiniDbError minidb_update(MiniDb *db, int64_t key, void *data)
     return MINIDB_OK;
 }
 
-MiniDbError minidb_delete(MiniDb *db, int64_t key)
+MiniDbState minidb_delete(MiniDb *db, int64_t key)
 {
     if (db->header.row_count > 0) {
         int64_t old_address;
@@ -240,7 +240,7 @@ MiniDbError minidb_delete(MiniDb *db, int64_t key)
             assert(db->header.freelist_count == db->freelist.size);
 
             minidb_header_write(db);
-            minidb_write_index(db);
+            minidb_index_write(db);
         }
     }
 
