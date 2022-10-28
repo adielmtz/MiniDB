@@ -1,5 +1,6 @@
 #include "minidb.h"
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef is_null
@@ -71,7 +72,7 @@ static void minidb_initialize_empty(MiniDb *db)
     binarytree_init(&db->freelist);
 }
 
-void minidb_create(MiniDb *db, const char *path, size_t data_size)
+void minidb_create(MiniDb *db, const char *path, int64_t data_size)
 {
     minidb_initialize_empty(db);
     db->data_file = fopen(path, "w+");

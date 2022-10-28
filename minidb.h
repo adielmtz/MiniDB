@@ -2,7 +2,6 @@
 
 #include "tree.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 
 typedef struct MiniDb
@@ -44,7 +43,7 @@ const char *minidb_error_get_str(MiniDbState value);
  * @param path The path to the database file.
  * @param data_size The size of the data to store (sizeof(my_struct)).
  */
-void minidb_create(MiniDb *db, const char *path, size_t data_size);
+void minidb_create(MiniDb *db, const char *path, int64_t data_size);
 
 /**
  * Opens an existing MiniDb database file.
