@@ -24,9 +24,8 @@ typedef enum MiniDbState
 {
     MINIDB_OK,
     MINIDB_ERROR,
-    MINIDB_ERROR_NOT_FOUND,
+    MINIDB_ERROR_ROW_NOT_FOUND,
     MINIDB_ERROR_DUPLICATED_KEY_VIOLATION,
-    MINIDB_ERROR_OUT_OF_SPACE,
 } MiniDbState;
 
 /**
@@ -93,7 +92,7 @@ MiniDbState minidb_select_all(const MiniDb *db, void (*callback)(int64_t, void *
 MiniDbState minidb_insert(MiniDb *db, int64_t key, void *data);
 
 /**
- * Updates an existing row;
+ * Updates an existing row.
  *
  * @param db The MiniDb object.
  * @param key The key of the row to update.

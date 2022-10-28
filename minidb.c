@@ -17,9 +17,8 @@ const char *minidb_error_get_str(MiniDbState value)
     switch (value) {
         RETURN_CASE_AS_STRING(MINIDB_OK);
         RETURN_CASE_AS_STRING(MINIDB_ERROR);
-        RETURN_CASE_AS_STRING(MINIDB_ERROR_NOT_FOUND);
+        RETURN_CASE_AS_STRING(MINIDB_ERROR_ROW_NOT_FOUND);
         RETURN_CASE_AS_STRING(MINIDB_ERROR_DUPLICATED_KEY_VIOLATION);
-        RETURN_CASE_AS_STRING(MINIDB_ERROR_OUT_OF_SPACE);
         SWITCH_UNREACHABLE_DEFAULT_CASE();
     }
 }
@@ -148,7 +147,7 @@ MiniDbState minidb_select(const MiniDb *db, int64_t key, void *result)
 {
     BinaryTreeNode *node = binarytree_search(&db->index, key);
     if (is_null(node)) {
-        return MINIDB_ERROR_NOT_FOUND;
+        return MINIDB_ERROR_ROW_NOT_FOUND;
     }
 
     fseek(db->data_file, node->data.address, SEEK_SET);
@@ -156,8 +155,7 @@ MiniDbState minidb_select(const MiniDb *db, int64_t key, void *result)
     return MINIDB_OK;
 }
 
-static void
-minidb_index_traverse(const MiniDb *db, BinaryTreeNode *current, void *result, void (*callback)(int64_t, void *))
+static void minidb_index_traverse(const MiniDb *db, BinaryTreeNode *current, void *result, void (*callback)(int64_t, void *))
 {
     if (!is_null(current)) {
         minidb_index_traverse(db, current->left, result, callback);
@@ -222,7 +220,7 @@ MiniDbState minidb_update(MiniDb *db, int64_t key, void *data)
 {
     BinaryTreeNode *node = binarytree_search(&db->index, key);
     if (is_null(node)) {
-        return MINIDB_ERROR_NOT_FOUND;
+        return MINIDB_ERROR_ROW_NOT_FOUND;
     }
 
     fseek(db->data_file, node->data.address, SEEK_SET);
