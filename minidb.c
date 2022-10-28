@@ -22,15 +22,17 @@ const char *minidb_error_get_str(MiniDbState value)
     }
 }
 
-static char *minidb_build_index_file_path(const char *base_path)
+static void minidb_build_index_file_path(const char *base_path, char *output, size_t output_size)
 {
     size_t len = strlen(base_path);
-    size_t total_len = len + sizeof(MINIDB_INDEX_SUFFIX);
-    char *result = malloc(sizeof(char) * total_len);
-    memcpy(result, base_path, len);
-    memcpy(result + len, MINIDB_INDEX_SUFFIX, sizeof(MINIDB_INDEX_SUFFIX));
-    result[total_len] = '\0';
-    return result;
+    size_t total_len = len + sizeof(MINIDB_INDEX_SUFFIX) - 1;
+    if (total_len >= output_size) {
+        total_len = output_size - 1;
+    }
+
+    memcpy(output, base_path, len);
+    memcpy(output + len, MINIDB_INDEX_SUFFIX, sizeof(MINIDB_INDEX_SUFFIX) - 1);
+    output[total_len] = '\0';
 }
 
 static void minidb_header_write(const MiniDb *db)
@@ -73,9 +75,9 @@ void minidb_create(MiniDb *db, const char *path, size_t data_size)
     minidb_initialize_empty(db);
     db->data_file = fopen(path, "w+");
     if (!is_null(db->data_file)) {
-        char *index_file = minidb_build_index_file_path(path);
-        db->index_file = fopen(index_file, "w+");
-        free(index_file);
+        char index_path[1024];
+        minidb_build_index_file_path(path, index_path, sizeof(index_path));
+        db->index_file = fopen(index_path, "w+");
 
         if (is_null(db->index_file)) {
             fclose(db->data_file);
@@ -93,9 +95,9 @@ void minidb_open(MiniDb *db, const char *path)
     minidb_initialize_empty(db);
     db->data_file = fopen(path, "r+");
     if (!is_null(db->data_file)) {
-        char *index_file = minidb_build_index_file_path(path);
-        db->index_file = fopen(index_file, "r+");
-        free(index_file);
+        char index_path[1024];
+        minidb_build_index_file_path(path, index_path, sizeof(index_path));
+        db->index_file = fopen(index_path, "r+");
 
         if (is_null(db->index_file)) {
             fclose(db->data_file);
