@@ -9,16 +9,17 @@
 #define MINIDB_INDEX_SUFFIX "-index"
 #define MINIDB_HEADER_SIZE (sizeof(((MiniDb*)0)->header))
 #define RETURN_CASE_AS_STRING(caseval) case caseval: return #caseval
+#define SWITCH_UNREACHABLE_DEFAULT_CASE() default: assert(0)
 
 const char *minidb_error_get_str(MiniDbState value)
 {
     switch (value) {
         RETURN_CASE_AS_STRING(MINIDB_OK);
+        RETURN_CASE_AS_STRING(MINIDB_ERROR);
         RETURN_CASE_AS_STRING(MINIDB_ERROR_NOT_FOUND);
         RETURN_CASE_AS_STRING(MINIDB_ERROR_DUPLICATED_KEY_VIOLATION);
         RETURN_CASE_AS_STRING(MINIDB_ERROR_OUT_OF_SPACE);
-        default:
-            return "UNKNOWN MINIDBERROR";
+        SWITCH_UNREACHABLE_DEFAULT_CASE();
     }
 }
 
@@ -61,9 +62,9 @@ static void minidb_index_write(const MiniDb *db)
 
 static void minidb_initialize_empty(MiniDb *db)
 {
-    db->header.row_size = 0;
+    db->header.data_size = 0;
     db->header.row_count = 0;
-    db->header.freelist_count = 0;
+    db->header.free_count = 0;
     db->data_file = NULL;
     db->index_file = NULL;
     binarytree_init(&db->index);
@@ -85,7 +86,7 @@ void minidb_create(MiniDb *db, const char *path, size_t data_size)
             return;
         }
 
-        db->header.row_size = data_size;
+        db->header.data_size = data_size;
         minidb_header_write(db);
     }
 }
@@ -119,7 +120,7 @@ void minidb_open(MiniDb *db, const char *path)
             }
 
             // parse freelist
-            for (int64_t i = 0; i < db->header.freelist_count; i++) {
+            for (int64_t i = 0; i < db->header.free_count; i++) {
                 fread(&node.data, BINARYTREE_NODE_DATA_SIZE, 1, db->index_file);
                 binarytree_insert(&db->freelist, node.data.key, node.data.address);
             }
@@ -150,11 +151,12 @@ MiniDbState minidb_select(const MiniDb *db, int64_t key, void *result)
     }
 
     fseek(db->data_file, node->data.address, SEEK_SET);
-    fread(result, db->header.row_size, 1, db->data_file);
+    fread(result, db->header.data_size, 1, db->data_file);
     return MINIDB_OK;
 }
 
-static void minidb_index_traverse(MiniDb *db, BinaryTreeNode *current, void *result, void (*callback)(int64_t, void *))
+static void
+minidb_index_traverse(const MiniDb *db, BinaryTreeNode *current, void *result, void (*callback)(int64_t, void *))
 {
     if (!is_null(current)) {
         minidb_index_traverse(db, current->left, result, callback);
@@ -166,7 +168,7 @@ static void minidb_index_traverse(MiniDb *db, BinaryTreeNode *current, void *res
 
 MiniDbState minidb_select_all(const MiniDb *db, void (*callback)(int64_t, void *))
 {
-    void *result = malloc(db->header.row_size);
+    void *result = malloc(db->header.data_size);
     minidb_index_traverse(db, db->index.root, result, callback);
     free(result);
     return MINIDB_OK;
@@ -197,16 +199,16 @@ MiniDbState minidb_insert(MiniDb *db, int64_t key, void *data)
     int64_t address;
 
     if (is_null(free_node)) {
-        address = MINIDB_HEADER_SIZE + db->header.row_size * db->header.row_count;
+        address = MINIDB_HEADER_SIZE + db->header.data_size * db->header.row_count;
     } else {
         address = free_node->data.address;
         binarytree_remove(&db->freelist, free_node->data.key, NULL);
-        db->header.freelist_count--;
-        assert(db->header.freelist_count == db->freelist.size);
+        db->header.free_count--;
+        assert(db->header.free_count == db->freelist.size);
     }
 
     fseek(db->data_file, address, SEEK_SET);
-    fwrite(data, db->header.row_size, 1, db->data_file);
+    fwrite(data, db->header.data_size, 1, db->data_file);
     db->header.row_count++;
 
     binarytree_insert(&db->index, key, address);
@@ -223,7 +225,7 @@ MiniDbState minidb_update(MiniDb *db, int64_t key, void *data)
     }
 
     fseek(db->data_file, node->data.address, SEEK_SET);
-    fwrite(data, db->header.row_size, 1, db->data_file);
+    fwrite(data, db->header.data_size, 1, db->data_file);
     fflush(db->data_file);
     return MINIDB_OK;
 }
@@ -238,8 +240,8 @@ MiniDbState minidb_delete(MiniDb *db, int64_t key)
             assert(db->header.row_count == db->index.size);
 
             binarytree_insert(&db->freelist, old_address, old_address);
-            db->header.freelist_count++;
-            assert(db->header.freelist_count == db->freelist.size);
+            db->header.free_count++;
+            assert(db->header.free_count == db->freelist.size);
 
             minidb_header_write(db);
             minidb_index_write(db);

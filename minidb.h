@@ -9,9 +9,9 @@ typedef struct MiniDb
 {
     struct
     {
-        size_t row_size;
+        int64_t data_size;
         int64_t row_count;
-        int64_t freelist_count;
+        int64_t free_count;
     } header;
 
     /* Runtime fields */
@@ -24,6 +24,7 @@ typedef struct MiniDb
 typedef enum MiniDbState
 {
     MINIDB_OK,
+    MINIDB_ERROR,
     MINIDB_ERROR_NOT_FOUND,
     MINIDB_ERROR_DUPLICATED_KEY_VIOLATION,
     MINIDB_ERROR_OUT_OF_SPACE,

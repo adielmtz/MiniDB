@@ -120,10 +120,10 @@ int main(void)
         } else if (strcmp(command, "dbinfo") == 0) {
             puts("== DATABASE INFO ==");
             printf("Physical name  : %s\n", db_name);
-            printf("Row Size       : %zu\n", db.header.row_size);
+            printf("Row Size       : %zu\n", db.header.data_size);
             printf("Row Count      : %zu\n", db.header.row_count);
-            printf("Freelist Count : %zu\n", db.header.freelist_count);
-            printf("Db Data Size   : %zu bytes\n", db.header.row_count * db.header.row_size);
+            printf("Freelist Count : %zu\n", db.header.free_count);
+            printf("Db Data Size   : %zu bytes\n", db.header.row_count * db.header.data_size);
             puts("");
         } else if (strcmp(command, "select") == 0) {
             int ncontrol;
