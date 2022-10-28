@@ -142,7 +142,7 @@ void minidb_close(MiniDb *db)
     }
 }
 
-MiniDbState minidb_select(MiniDb *db, int64_t key, void *result)
+MiniDbState minidb_select(const MiniDb *db, int64_t key, void *result)
 {
     BinaryTreeNode *node = binarytree_search(&db->index, key);
     if (is_null(node)) {
@@ -164,7 +164,7 @@ static void minidb_index_traverse(MiniDb *db, BinaryTreeNode *current, void *res
     }
 }
 
-MiniDbState minidb_select_all(MiniDb *db, void (*callback)(int64_t, void *))
+MiniDbState minidb_select_all(const MiniDb *db, void (*callback)(int64_t, void *))
 {
     void *result = malloc(db->header.row_size);
     minidb_index_traverse(db, db->index.root, result, callback);

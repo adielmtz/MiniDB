@@ -66,18 +66,20 @@ void minidb_close(MiniDb *db);
  * @param db The MiniDb object.
  * @param key The key to search.
  * @param result Where the row will be stored.
+ *
  * @return MINIDB_OK on success.
  */
-MiniDbState minidb_select(MiniDb *db, int64_t key, void *result);
+MiniDbState minidb_select(const MiniDb *db, int64_t key, void *result);
 
 /**
  * Selects all rows in the database.
  *
  * @param db The MiniDb object.
  * @param callback The callback function that will be executed on for each row.
+ *
  * @return MINIDB_OK on success.
  */
-MiniDbState minidb_select_all(MiniDb *db, void (*callback)(int64_t, void *));
+MiniDbState minidb_select_all(const MiniDb *db, void (*callback)(int64_t, void *));
 
 /**
  * Inserts a new row into the MiniDb database.
