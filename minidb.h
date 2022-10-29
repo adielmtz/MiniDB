@@ -41,16 +41,20 @@ const char *minidb_error_get_str(MiniDbState value);
  * @param db The MiniDb object to initialize (stack-allocated).
  * @param path The path to the database file.
  * @param data_size The size of the data to store (sizeof(my_struct)).
+ *
+ * @return MINIDB_OK on success.
  */
-void minidb_create(MiniDb *db, const char *path, int64_t data_size);
+MiniDbState minidb_create(MiniDb *db, const char *path, int64_t data_size);
 
 /**
  * Opens an existing MiniDb database file.
  *
  * @param db The MiniDb object to initialize and load (stack-allocated).
  * @param path The path to the database file.
+ *
+ * @return MINISB_OK on success.
  */
-void minidb_open(MiniDb *db, const char *path);
+MiniDbState minidb_open(MiniDb *db, const char *path);
 
 /**
  * Flushes the database file, releases memory and closes the MiniDb database.

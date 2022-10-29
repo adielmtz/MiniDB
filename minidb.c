@@ -71,61 +71,70 @@ static void minidb_initialize_empty(MiniDb *db)
     binarytree_init(&db->freelist);
 }
 
-void minidb_create(MiniDb *db, const char *path, int64_t data_size)
+MiniDbState minidb_create(MiniDb *db, const char *path, int64_t data_size)
 {
     minidb_initialize_empty(db);
     db->data_file = fopen(path, "w+");
-    if (!is_null(db->data_file)) {
-        char index_path[1024];
-        minidb_build_index_file_path(path, index_path, sizeof(index_path));
-        db->index_file = fopen(index_path, "w+");
-
-        if (is_null(db->index_file)) {
-            fclose(db->data_file);
-            db->data_file = NULL;
-            return;
-        }
-
-        db->header.data_size = data_size;
-        minidb_header_write(db);
+    if (is_null(db->data_file)) {
+        return MINIDB_ERROR;
     }
+
+    char index_path[1024];
+    minidb_build_index_file_path(path, index_path, sizeof(index_path));
+    db->index_file = fopen(index_path, "w+");
+
+    if (is_null(db->index_file)) {
+        fclose(db->data_file);
+        db->data_file = NULL;
+        return MINIDB_ERROR;
+    }
+
+    db->header.data_size = data_size;
+    minidb_header_write(db);
+    return MINIDB_OK;
 }
 
-void minidb_open(MiniDb *db, const char *path)
+MiniDbState minidb_open(MiniDb *db, const char *path)
 {
     minidb_initialize_empty(db);
     db->data_file = fopen(path, "r+");
-    if (!is_null(db->data_file)) {
-        char index_path[1024];
-        minidb_build_index_file_path(path, index_path, sizeof(index_path));
-        db->index_file = fopen(index_path, "r+");
 
-        if (is_null(db->index_file)) {
-            fclose(db->data_file);
-            db->data_file = NULL;
-            return;
+    if (is_null(db->data_file)) {
+        return MINIDB_ERROR;
+    }
+
+    char index_path[1024];
+    minidb_build_index_file_path(path, index_path, sizeof(index_path));
+    db->index_file = fopen(index_path, "r+");
+
+    if (is_null(db->index_file)) {
+        fclose(db->data_file);
+        db->data_file = NULL;
+        return MINIDB_ERROR;
+    }
+
+    // Read database header
+    fread(&db->header, MINIDB_HEADER_SIZE, 1, db->data_file);
+
+    // Parse & load index
+    if (db->header.row_count > 0) {
+        BinaryTreeNode node;
+        fseek(db->index_file, 0, SEEK_SET);
+
+        // parse index
+        for (int64_t i = 0; i < db->header.row_count; i++) {
+            fread(&node.data, BINARYTREE_NODE_DATA_SIZE, 1, db->index_file);
+            binarytree_insert(&db->index, node.data.key, node.data.address);
         }
 
-        fread(&db->header, MINIDB_HEADER_SIZE, 1, db->data_file);
-
-        // Parse & load index
-        if (db->header.row_count > 0) {
-            BinaryTreeNode node;
-            fseek(db->index_file, 0, SEEK_SET);
-
-            // parse index
-            for (int64_t i = 0; i < db->header.row_count; i++) {
-                fread(&node.data, BINARYTREE_NODE_DATA_SIZE, 1, db->index_file);
-                binarytree_insert(&db->index, node.data.key, node.data.address);
-            }
-
-            // parse freelist
-            for (int64_t i = 0; i < db->header.free_count; i++) {
-                fread(&node.data, BINARYTREE_NODE_DATA_SIZE, 1, db->index_file);
-                binarytree_insert(&db->freelist, node.data.key, node.data.address);
-            }
+        // parse freelist
+        for (int64_t i = 0; i < db->header.free_count; i++) {
+            fread(&node.data, BINARYTREE_NODE_DATA_SIZE, 1, db->index_file);
+            binarytree_insert(&db->freelist, node.data.key, node.data.address);
         }
     }
+
+    return MINIDB_OK;
 }
 
 void minidb_close(MiniDb *db)
