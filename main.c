@@ -74,14 +74,20 @@ int main(void)
             prompt_string("Path: ", filepath);
             printf("Creando base de datos... ");
             fflush(stdout);
-            minidb_create(&db, filepath, sizeof(Alumno));
+            error = minidb_create(&db, filepath, sizeof(Alumno));
+            if (error != MINIDB_OK) {
+                printf("Fatal error: %s\n", minidb_error_get_str(error));
+                exit(1);
+            }
+
             puts("Ok!\n");
             fflush(stdout);
         } else if (strcmp(command, "open") == 0 || strcmp(command, "abrir") == 0) {
             prompt_string("Path: ", filepath);
-            minidb_open(&db, filepath);
-            if (db.data_file == NULL) {
-                printf("Error fatal: el archivo no existe o no se pudo abrir.\n");
+            error = minidb_open(&db, filepath);
+
+            if (error != MINIDB_OK) {
+                printf("Fatal error: %s\n", minidb_error_get_str(error));
                 exit(1);
             }
 
