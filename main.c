@@ -151,7 +151,7 @@ int main(void)
         } else if (strcmp(command, "insert") == 0) {
             prompt_string("Nombre[51] : ", alumno.nombre);
             prompt_int("N. control : ", alumno.ncontrol);
-            prompt_float("Promedio   :   ", alumno.promedio);
+            prompt_float("Promedio   : ", alumno.promedio);
 
             error = minidb_insert(&db, alumno.ncontrol, &alumno);
             if (error != MINIDB_OK) {
@@ -163,7 +163,7 @@ int main(void)
         } else if (strcmp(command, "update") == 0) {
             prompt_string("Nombre[51] : ", alumno.nombre);
             prompt_int("N. control : ", alumno.ncontrol);
-            prompt_float("Promedio   :   ", alumno.promedio);
+            prompt_float("Promedio   : ", alumno.promedio);
 
             error = minidb_update(&db, alumno.ncontrol, &alumno);
             if (error != MINIDB_OK) {
