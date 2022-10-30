@@ -147,13 +147,13 @@ static BinaryTreeNode *tree_search_successor_node(BinaryTreeNode *node)
 /**
  * Recursively removes a node from the tree.
  */
-static void tree_remove_node_recurse(BinaryTreeNode **root, int64_t key, int64_t *address)
+static bool tree_remove_node_recurse(BinaryTreeNode **root, int64_t key, int64_t *address)
 {
     BinaryTreeNode *parent = NULL;
     BinaryTreeNode *current = node_search_recurse(*root, key, &parent);
 
     if (is_null(current)) {
-        return;
+        return false;
     }
 
     if (!is_null(address)) {
@@ -193,14 +193,18 @@ static void tree_remove_node_recurse(BinaryTreeNode **root, int64_t key, int64_t
 
         free(current);
     }
+
+    return true;
 }
 
 bool binarytree_remove(BinaryTree *tree, int64_t key, int64_t *address)
 {
     if (!tree_is_empty(tree)) {
-        tree_remove_node_recurse(&tree->root, key, address);
-        tree->size--;
-        return true;
+        if (tree_remove_node_recurse(&tree->root, key, address)) {
+            tree->size--;
+            assert(tree->size >= 0);
+            return true;
+        }
     }
 
     return false;
