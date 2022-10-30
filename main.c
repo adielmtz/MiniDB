@@ -14,18 +14,18 @@ do {                                            \
     (outbuff)[strlen((outbuff)) - 1] = '\0';    \
 } while (0)
 
-#define prompt_int(text, intval)    \
-do {                                \
-    char buff[20];                  \
-    prompt_string(text, buff);      \
-    sscanf_s(buff, "%d", (intval)); \
+#define prompt_int(text, intval)             \
+do {                                         \
+    char buff[20];                           \
+    prompt_string(text, buff);               \
+    (intval) = (int) strtol(buff, NULL, 10); \
 } while (0)
 
-#define prompt_float(text, floatval)  \
-do {                                  \
-    char buff[20];                    \
-    prompt_string(text, buff);        \
-    sscanf_s(buff, "%f", (floatval)); \
+#define prompt_float(text, floatval) \
+do {                                 \
+    char buff[20];                   \
+    prompt_string(text, buff);       \
+    (floatval) = strtof(buff, NULL); \
 } while (0)
 
 typedef struct Alumno
@@ -115,13 +115,13 @@ int main(void)
         }
     }
 
+    Alumno alumno;
     while (1) {
         printf("MiniDb\\%s> ", db_name);
         fflush(stdout);
         fgets(command, sizeof(command), stdin);
         command[strlen(command) - 1] = '\0';
 
-        Alumno alumno;
         if (strcmp(command, "salir") == 0 || strcmp(command, "exit") == 0) {
             break;
         } else if (strcmp(command, "dbinfo") == 0) {
@@ -134,7 +134,7 @@ int main(void)
             puts("");
         } else if (strcmp(command, "select") == 0) {
             int ncontrol;
-            prompt_int("N. control: ", &ncontrol);
+            prompt_int("N. control: ", ncontrol);
             puts("");
 
             error = minidb_select(&db, ncontrol, &alumno);
@@ -149,9 +149,9 @@ int main(void)
             print_pretty_table(NULL, true);
             minidb_select_all(&db, select_print_callback);
         } else if (strcmp(command, "insert") == 0) {
-            prompt_string("Nombre[51]: ", alumno.nombre);
-            prompt_int("N. control: ", &alumno.ncontrol);
-            prompt_float("Promedio:   ", &alumno.promedio);
+            prompt_string("Nombre[51] : ", alumno.nombre);
+            prompt_int("N. control : ", alumno.ncontrol);
+            prompt_float("Promedio   :   ", alumno.promedio);
 
             error = minidb_insert(&db, alumno.ncontrol, &alumno);
             if (error != MINIDB_OK) {
@@ -161,9 +161,9 @@ int main(void)
 
             puts("Tupla insertada correctamente\n");
         } else if (strcmp(command, "update") == 0) {
-            prompt_string("Nombre[51]: ", alumno.nombre);
-            prompt_int("N. control: ", &alumno.ncontrol);
-            prompt_float("Promedio:   ", &alumno.promedio);
+            prompt_string("Nombre[51] : ", alumno.nombre);
+            prompt_int("N. control : ", alumno.ncontrol);
+            prompt_float("Promedio   :   ", alumno.promedio);
 
             error = minidb_update(&db, alumno.ncontrol, &alumno);
             if (error != MINIDB_OK) {
@@ -174,7 +174,7 @@ int main(void)
             puts("Tupla actualizada correctamente\n");
         } else if (strcmp(command, "delete") == 0) {
             int ncontrol;
-            prompt_int("N. control: ", &ncontrol);
+            prompt_int("N. control: ", ncontrol);
 
             error = minidb_delete(&db, ncontrol);
             if (error != MINIDB_OK) {
