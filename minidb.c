@@ -133,7 +133,7 @@ MiniDbState minidb_open(MiniDb *db, const char *path)
         for (int64_t i = 0; i < db->header.free_count; i++) {
             fread(&node.key, sizeof(node.key), 1, db->index_file);
             fread(&node.address, sizeof(node.address), 1, db->index_file);
-            binarytree_insert(&db->index, node.key, node.address);
+            binarytree_insert(&db->freelist, node.key, node.address);
         }
     }
 
