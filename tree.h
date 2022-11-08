@@ -3,15 +3,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define BINARYTREE_NODE_DATA_SIZE (sizeof(((BinaryTreeNode*)0)->data))
-
 typedef struct BinaryTreeNode
 {
-    struct
-    {
-        int64_t key;
-        int64_t address;
-    } data;
+    int64_t key;
+    int64_t address;
     struct BinaryTreeNode *left;
     struct BinaryTreeNode *right;
 } BinaryTreeNode;

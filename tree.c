@@ -17,8 +17,8 @@ static BinaryTreeNode *node_create(int64_t key, int64_t address)
 {
     BinaryTreeNode *node = malloc(sizeof(BinaryTreeNode));
     if (!is_null(node)) {
-        node->data.key = key;
-        node->data.address = address;
+        node->key = key;
+        node->address = address;
         node->left = NULL;
         node->right = NULL;
     }
@@ -57,11 +57,11 @@ bool binarytree_contains(const BinaryTree *tree, int64_t key)
 {
     BinaryTreeNode *current = tree->root;
     while (!is_null(current)) {
-        if (current->data.key == key) {
+        if (current->key == key) {
             return true;
         }
 
-        current = key < current->data.key ? current->left : current->right;
+        current = key < current->key ? current->left : current->right;
     }
 
     return false;
@@ -75,9 +75,9 @@ static BinaryTreeNode *node_search_recurse(BinaryTreeNode *node, int64_t key, Bi
     BinaryTreeNode *last = NULL;
     BinaryTreeNode *current = node;
 
-    while (current != NULL && current->data.key != key) {
+    while (current != NULL && current->key != key) {
         last = current;
-        if (key < current->data.key) {
+        if (key < current->key) {
             current = current->left;
         } else {
             current = current->right;
@@ -105,7 +105,7 @@ BinaryTreeNode *binarytree_search(const BinaryTree *tree, int64_t key)
  */
 static BinaryTreeNode *tree_insert_node_recurse(BinaryTreeNode *parent, int64_t key, int64_t address)
 {
-    BinaryTreeNode **child = key < parent->data.key ? &parent->left : &parent->right;
+    BinaryTreeNode **child = key < parent->key ? &parent->left : &parent->right;
     if (is_null(*child)) {
         *child = node_create(key, address);
         return *child;
@@ -157,7 +157,7 @@ static bool tree_remove_node_recurse(BinaryTreeNode **root, int64_t key, int64_t
     }
 
     if (!is_null(address)) {
-        *address = current->data.address;
+        *address = current->address;
     }
 
     if (node_is_leaf(current)) {
@@ -174,11 +174,11 @@ static bool tree_remove_node_recurse(BinaryTreeNode **root, int64_t key, int64_t
         free(current);
     } else if (node_is_branch(current)) {
         BinaryTreeNode *successor = tree_search_successor_node(current->right);
-        int64_t subkey = successor->data.key;
-        int64_t subaddress = successor->data.address;
+        int64_t subkey = successor->key;
+        int64_t subaddress = successor->address;
         tree_remove_node_recurse(root, subkey, NULL);
-        current->data.key = subkey;
-        current->data.address = subaddress;
+        current->key = subkey;
+        current->address = subaddress;
     } else {
         BinaryTreeNode *child = !is_null(current->left) ? current->left : current->right;
         if (current != *root) {

@@ -47,7 +47,8 @@ static void index_write_node_recurse(const MiniDb *db, const BinaryTreeNode *nod
 {
     if (!is_null(node)) {
         index_write_node_recurse(db, node->left);
-        fwrite(&node->data, BINARYTREE_NODE_DATA_SIZE, 1, db->index_file);
+        fwrite(&node->key, sizeof(node->key), 1, db->index_file);
+        fwrite(&node->address, sizeof(node->address), 1, db->index_file);
         index_write_node_recurse(db, node->right);
     }
 }
@@ -123,14 +124,16 @@ MiniDbState minidb_open(MiniDb *db, const char *path)
 
         // parse index
         for (int64_t i = 0; i < db->header.row_count; i++) {
-            fread(&node.data, BINARYTREE_NODE_DATA_SIZE, 1, db->index_file);
-            binarytree_insert(&db->index, node.data.key, node.data.address);
+            fread(&node.key, sizeof(node.key), 1, db->index_file);
+            fread(&node.address, sizeof(node.address), 1, db->index_file);
+            binarytree_insert(&db->index, node.key, node.address);
         }
 
         // parse freelist
         for (int64_t i = 0; i < db->header.free_count; i++) {
-            fread(&node.data, BINARYTREE_NODE_DATA_SIZE, 1, db->index_file);
-            binarytree_insert(&db->freelist, node.data.key, node.data.address);
+            fread(&node.key, sizeof(node.key), 1, db->index_file);
+            fread(&node.address, sizeof(node.address), 1, db->index_file);
+            binarytree_insert(&db->index, node.key, node.address);
         }
     }
 
@@ -159,7 +162,7 @@ MiniDbState minidb_select(const MiniDb *db, int64_t key, void *result)
         return MINIDB_ERROR_ROW_NOT_FOUND;
     }
 
-    fseek(db->data_file, node->data.address, SEEK_SET);
+    fseek(db->data_file, node->address, SEEK_SET);
     fread(result, db->header.data_size, 1, db->data_file);
     return MINIDB_OK;
 }
@@ -168,8 +171,8 @@ static void minidb_index_traverse(const MiniDb *db, BinaryTreeNode *current, voi
 {
     if (!is_null(current)) {
         minidb_index_traverse(db, current->left, result, callback);
-        minidb_select(db, current->data.key, result);
-        callback(current->data.key, result);
+        minidb_select(db, current->key, result);
+        callback(current->key, result);
         minidb_index_traverse(db, current->right, result, callback);
     }
 }
@@ -209,8 +212,8 @@ MiniDbState minidb_insert(MiniDb *db, int64_t key, void *data)
     if (is_null(free_node)) {
         address = MINIDB_HEADER_SIZE + db->header.data_size * db->header.row_count;
     } else {
-        address = free_node->data.address;
-        binarytree_remove(&db->freelist, free_node->data.key, NULL);
+        address = free_node->address;
+        binarytree_remove(&db->freelist, free_node->key, NULL);
         db->header.free_count--;
         assert(db->header.free_count == db->freelist.size);
     }
@@ -232,7 +235,7 @@ MiniDbState minidb_update(MiniDb *db, int64_t key, void *data)
         return MINIDB_ERROR_ROW_NOT_FOUND;
     }
 
-    fseek(db->data_file, node->data.address, SEEK_SET);
+    fseek(db->data_file, node->address, SEEK_SET);
     fwrite(data, db->header.data_size, 1, db->data_file);
     fflush(db->data_file);
     return MINIDB_OK;
