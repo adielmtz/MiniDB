@@ -54,6 +54,24 @@ static void select_print_callback(int64_t key, void *data)
     print_pretty_table((Alumno *) data, false);
 }
 
+static void print_help_text()
+{
+    puts(
+            "Ayuda de MiniDB:\n\n"
+            " Comando        Descripción                                     \n"
+            "-------------- -------------------------------------------------\n"
+            " exit, salir    Cierra la base de datos y termina el programa.  \n"
+            " new, nueva     Crea una nueva base de datos vacía.             \n"
+            " open, abrir    Abre una base de datos existente.               \n"
+            " dbinfo         Muestra información sobre la base de datos.     \n"
+            " select         Buscar un registro y mostrarlo en pantalla.     \n"
+            " select *       Mostrar todos los registros en pantalla.        \n"
+            " insert         Insertar un registro.                           \n"
+            " update         Actualizar un registro existente.               \n"
+            " delete         Borrar un registro.                             \n"
+    );
+}
+
 int main(void)
 {
     MiniDb db;
@@ -71,20 +89,7 @@ int main(void)
         if (strcmp(command, "exit") == 0) {
             return 0;
         } else if (strcmp(command, "help") == 0) {
-            puts(
-                    "Ayuda de MiniDB:\n\n"
-                    " Comando        Descripción                                     \n"
-                    "-------------- -------------------------------------------------\n"
-                    " exit, salir    Cierra la base de datos y termina el programa.  \n"
-                    " new, nueva     Crea una nueva base de datos vacía.             \n"
-                    " open, abrir    Abre una base de datos existente.               \n"
-                    " dbinfo         Muestra información sobre la base de datos.     \n"
-                    " select         Buscar un registro y mostrarlo en pantalla.     \n"
-                    " select *       Mostrar todos los registros en pantalla.        \n"
-                    " insert         Insertar un registro.                           \n"
-                    " update         Actualizar un registro existente.               \n"
-                    " delete         Borrar un registro.                             \n"
-            );
+            print_help_text();
         } else if (strcmp(command, "new") == 0 || strcmp(command, "nueva") == 0) {
             prompt_string("Path: ", filepath);
             printf("Creando base de datos... ");
@@ -139,6 +144,8 @@ int main(void)
 
         if (strcmp(command, "salir") == 0 || strcmp(command, "exit") == 0) {
             break;
+        } else if (strcmp(command, "help") == 0) {
+            print_help_text();
         } else if (strcmp(command, "dbinfo") == 0) {
             puts("== DATABASE INFO ==");
             printf("Physical name  : %s\n", db_name);
