@@ -70,6 +70,21 @@ int main(void)
 
         if (strcmp(command, "exit") == 0) {
             return 0;
+        } else if (strcmp(command, "help") == 0) {
+            puts(
+                    "Ayuda de MiniDB:\n\n"
+                    " Comando        Descripción                                     \n"
+                    "-------------- -------------------------------------------------\n"
+                    " exit, salir    Cierra la base de datos y termina el programa.  \n"
+                    " new, nueva     Crea una nueva base de datos vacía.             \n"
+                    " open, abrir    Abre una base de datos existente.               \n"
+                    " dbinfo         Muestra información sobre la base de datos.     \n"
+                    " select         Buscar un registro y mostrarlo en pantalla.     \n"
+                    " select *       Mostrar todos los registros en pantalla.        \n"
+                    " insert         Insertar un registro.                           \n"
+                    " update         Actualizar un registro existente.               \n"
+                    " delete         Borrar un registro.                             \n"
+            );
         } else if (strcmp(command, "new") == 0 || strcmp(command, "nueva") == 0) {
             prompt_string("Path: ", filepath);
             printf("Creando base de datos... ");
