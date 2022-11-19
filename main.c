@@ -74,7 +74,7 @@ static void print_help_text()
 
 int main(void)
 {
-    MiniDb db;
+    MiniDb *db;
     MiniDbState error;
 
     char command[COMMAND_MAX_STRLEN];
@@ -94,6 +94,7 @@ int main(void)
             prompt_string("Path: ", filepath);
             printf("Creando base de datos... ");
             fflush(stdout);
+
             error = minidb_create(&db, filepath, sizeof(Alumno));
             if (error != MINIDB_OK) {
                 printf("Fatal error: %s\n", minidb_error_get_str(error));
@@ -147,19 +148,22 @@ int main(void)
         } else if (strcmp(command, "help") == 0) {
             print_help_text();
         } else if (strcmp(command, "dbinfo") == 0) {
+            MiniDbInfo info;
+            minidb_get_info(db, &info);
+
             puts("== DATABASE INFO ==");
             printf("Physical name  : %s\n", db_name);
-            printf("Row Size       : %zu\n", db.header.data_size);
-            printf("Row Count      : %zu\n", db.header.row_count);
-            printf("Freelist Count : %zu\n", db.header.free_count);
-            printf("Db Data Size   : %zu bytes\n", db.header.row_count * db.header.data_size);
+            printf("Data Size      : %zu\n", info.data_size);
+            printf("Row Count      : %zu\n", info.row_count);
+            printf("Free Count     : %zu\n", info.free_count);
+            printf("Db Data Size   : %zu\n", info.data_size * info.row_count);
             puts("");
         } else if (strcmp(command, "select") == 0) {
             int ncontrol;
             prompt_int("N. control: ", ncontrol);
             puts("");
 
-            error = minidb_select(&db, ncontrol, &alumno);
+            error = minidb_select(db, ncontrol, &alumno);
             if (error != MINIDB_OK) {
                 printf("Error: %s\n\n", minidb_error_get_str(error));
                 continue;
@@ -169,13 +173,13 @@ int main(void)
             printf("\n");
         } else if (strcmp(command, "select *") == 0) {
             print_pretty_table(NULL, true);
-            minidb_select_all(&db, select_print_callback);
+            minidb_select_all(db, select_print_callback);
         } else if (strcmp(command, "insert") == 0) {
             prompt_string("Nombre[51] : ", alumno.nombre);
             prompt_int("N. control : ", alumno.ncontrol);
             prompt_float("Promedio   : ", alumno.promedio);
 
-            error = minidb_insert(&db, alumno.ncontrol, &alumno);
+            error = minidb_insert(db, alumno.ncontrol, &alumno);
             if (error != MINIDB_OK) {
                 printf("Error: %s\n\n", minidb_error_get_str(error));
                 continue;
@@ -187,7 +191,7 @@ int main(void)
             prompt_int("N. control : ", alumno.ncontrol);
             prompt_float("Promedio   : ", alumno.promedio);
 
-            error = minidb_update(&db, alumno.ncontrol, &alumno);
+            error = minidb_update(db, alumno.ncontrol, &alumno);
             if (error != MINIDB_OK) {
                 printf("Error: %s\n\n", minidb_error_get_str(error));
                 continue;
@@ -198,7 +202,7 @@ int main(void)
             int ncontrol;
             prompt_int("N. control: ", ncontrol);
 
-            error = minidb_delete(&db, ncontrol);
+            error = minidb_delete(db, ncontrol);
             if (error != MINIDB_OK) {
                 printf("Error: %s\n\n", minidb_error_get_str(error));
                 continue;
