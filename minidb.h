@@ -1,29 +1,28 @@
 #pragma once
 
-#include "tree.h"
-#include <stdio.h>
-#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
 
-typedef struct MiniDb
+#ifndef is_null
+#define is_null(ptr) ((ptr) == NULL)
+#endif
+
+typedef struct MiniDb MiniDb;
+
+typedef struct MiniDbInfo
 {
-    struct
-    {
-        int64_t data_size;
-        int64_t row_count;
-        int64_t free_count;
-    } header;
-
-    /* Runtime fields */
-    FILE *data_file;
-    FILE *index_file;
-    BinaryTree index;
-    BinaryTree freelist;
-} MiniDb;
+    size_t data_size;
+    int64_t row_count;
+    int64_t free_count;
+} MiniDbInfo;
 
 typedef enum MiniDbState
 {
     MINIDB_OK,
     MINIDB_ERROR,
+    MINIDB_ERROR_MALLOC_FAIL,
+    MINIDB_ERROR_CANNOT_OPEN_FILE,
+    MINIDB_ERROR_NULL_POINTER,
     MINIDB_ERROR_ROW_NOT_FOUND,
     MINIDB_ERROR_DUPLICATED_KEY_VIOLATION,
 } MiniDbState;
@@ -44,7 +43,7 @@ const char *minidb_error_get_str(MiniDbState value);
  *
  * @return MINIDB_OK on success.
  */
-MiniDbState minidb_create(MiniDb *db, const char *path, int64_t data_size);
+MiniDbState minidb_create(MiniDb **db, const char *path, size_t data_size);
 
 /**
  * Opens an existing MiniDb database file.
@@ -54,14 +53,16 @@ MiniDbState minidb_create(MiniDb *db, const char *path, int64_t data_size);
  *
  * @return MINISB_OK on success.
  */
-MiniDbState minidb_open(MiniDb *db, const char *path);
+MiniDbState minidb_open(MiniDb **db, const char *path);
 
 /**
  * Flushes the database file, releases memory and closes the MiniDb database.
  *
  * @param db The MiniDb object to close.
  */
-void minidb_close(MiniDb *db);
+void minidb_close(MiniDb **db);
+
+void minidb_get_info(const MiniDb *db, MiniDbInfo *result);
 
 /**
  * Selects a row that matches the given key.
